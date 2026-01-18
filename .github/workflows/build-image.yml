@@ -57,6 +57,7 @@ jobs:
           if [[ $GITHUB_REF =~ refs/tags/* ]]; then
             TAGS="$TAGS,${{ env.DOCKER_IMAGE_NAME }}:latest"
           fi
+          # 同时加 ghcr.io 前缀
           TAGS="$TAGS,$(echo $TAGS | tr ',' '\n' | sed 's|^|ghcr.io/|' | tr '\n' ',')"
 
           if [[ $GITHUB_REF =~ refs/tags/* ]]; then
@@ -86,14 +87,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
-        if: ${{ steps.prep.outputs.is_release == 'yes' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Login to GitHub Container Registry
-        if: ${{ steps.prep.outputs.is_release == 'yes' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -103,7 +102,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          push: ${{ steps.prep.outputs.is_release == 'yes' }}
+          push: true   # ✅ 改成无论 release 都 push
           provenance: false
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.prep.outputs.tags }}
@@ -113,7 +112,6 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ env.DOCKER_IMAGE_NAME }}
 
       - name: Inspect
-        if: ${{ steps.prep.outputs.is_release == 'yes' }}
         run: |
           docker buildx imagetools inspect ${{ env.DOCKER_IMAGE_NAME }}:${{ steps.prep.outputs.version }}
 
